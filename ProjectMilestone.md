@@ -22,3 +22,9 @@ We may also need better metrics, such as number of lookups and hash table utiliz
 
 # Progress report: what have you already finished (please include code link where relevant)? What is the plan for the remaining weeks?
 Currently I have worked through MMC on a sample input to verify what the final hash table should look like. I am using this to aid my implementation. I have also set up the basic structure of the new `MorphingMatchChainBasedMatchFinder` by inheriting `HashBasedMatchFinder`. My plan for the rest of the quarter is to finish implementing this and verify the compression efficiency against a range of `max_chain_length` on the existing benchmarks in `lz77_sliding_window.py`.
+
+# We don't really need a sliding window with MMC
+# The complexity of searching backwards is minimized since we use gateways and suffix trees
+# We still have a maximum hash chain length, but the window can be arbitrarily long
+  - Current LZ77 Sliding Window is asymptotically optimal as window size goes to infinity [Wyner-Ziv, 94]
+  - For current testing, we can just massively increase the window size and measure latency
