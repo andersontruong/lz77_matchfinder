@@ -21,68 +21,6 @@ class MorphingMatchChainBasedMatchFinder(HashBasedMatchFinder):
             minimum_match_length=minimum_match_length
         )
 
-    def extend_match(
-        self, match_start_in_lookahead_buffer, match_pos, lookahead_buffer, left_extension=True
-    ):
-        """Extend candidate match to the right and left as long as the bytes match.
-        Returns the match position and length of the match.
-
-        Extend candidate match to the right, promote matches, prune hash chains
-
-        Parameters:
-        lookahead_buffer_pos (int): The index of the candidate start match in the lookahead buffer
-        match_pos (int): The position of the candidate start match in the sliding window
-        lookahead_buffer (bytearray): The lookahead buffer (this is basically the part not yet
-                                      added to window where we are looking for a match).
-        left_extension (bool): Whether to try to extend the match to left within the lookahead buffer.
-
-        Returns:
-        match_start_in_lookahead_buffer (int): The start index of the best match in the lookahead buffer (might be
-                                               different from the candidate start match if we extended left)
-        match_pos (int): The position of the best match in the sliding window
-        length (int): The length of the best match
-        """
-
-        # Right extension:
-        # Start comparing bytes from the potential match position in the window and the lookahead buffer
-        # until a mismatch is found or we've checked all bytes in the lookahead buffer.
-        match_length = 0
-        while (
-            match_start_in_lookahead_buffer + match_length < len(lookahead_buffer)
-            and self.window.get_byte_window_plus_lookahead(
-                match_pos + match_length, lookahead_buffer
-            )
-            == lookahead_buffer[match_start_in_lookahead_buffer + match_length]
-        ):
-            match_length += 1
-
-        # if left_extension:
-        #     # Left extension:
-        #     # If two sequences match at [i, i+length] in the lookahead buffer and [match_pos, match_pos+length] in the window,
-        #     # we then look at the previous byte (i.e., i-1 in the lookahead buffer and match_pos-1 in the window).
-        #     # If they match, we continue moving left until a mismatch is found,
-        #     # ensuring we don't try to extend beyond the window's start or the lookahead buffer's start.
-        #
-        #     # Left extension is useful where we missed a hash match because of a collision in the previous
-        #     # step. Note that we only extend left within the lookahead buffer, so we don't tread on the
-        #     # already encoded matches in past.
-        #
-        #     # note that this does not change the offset
-        #     while match_pos > self.window.start and (
-        #         match_start_in_lookahead_buffer > 0
-        #         and lookahead_buffer[match_start_in_lookahead_buffer - 1]
-        #         == self.window.get_byte_window_plus_lookahead(match_pos - 1, lookahead_buffer)
-        #     ):
-        #         match_pos -= 1
-        #         match_length += 1
-        #         match_start_in_lookahead_buffer -= 1
-
-        return (
-            match_start_in_lookahead_buffer,
-            match_pos,
-            match_length,
-        )  # match_start_in_lookahead_buffer is the number of literals
-
     def add_to_hashtable_keep_next_position(self, position, data):
         """Updates the hash table with the new position of a byte sequence. Maintains chain length limit.
            Supports random insert by not updating the next position."""
@@ -254,7 +192,7 @@ class MorphingMatchChainBasedMatchFinder(HashBasedMatchFinder):
             # print(f'\tStr: {repr("".join([chr(x) for x in data]))}')
             if best_length >= self.minimum_match_length:
                 # TODO: Ignore lazy right now
-                return (best_literals_count, best_match_pos, best_length)
+                # return (best_literals_count, best_match_pos, best_length)
                 if not self.lazy:
                     return (best_literals_count, best_match_pos, best_length)
                 else:
