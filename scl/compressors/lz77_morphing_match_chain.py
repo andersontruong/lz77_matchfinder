@@ -114,13 +114,13 @@ class MorphingMatchChainBasedMatchFinder(HashBasedMatchFinder):
 
         # Retrieve potential match positions from the hash table
         hash_data = bytearray(lookahead_buffer[i : i + self.hash_length])
-        # print('Hash data: ', hash_data)
+        print('Hash data: ', hash_data)
         candidate_positions = self.get_positions_from_hash(hash_data)
 
         # If candidates exist
         while len(candidate_positions) > 0:
-            # print(f'\tHash match to {repr(''.join([chr(x) for x in hash_data]))} - [{self.window.end + i}, {self.window.end + i + self.hash_length + best_length})')
-            # print(f'\t\tCandidates: {candidate_positions}')
+            print(f'\tHash match to {repr(''.join([chr(x) for x in hash_data]))} - [{self.window.end + i}, {self.window.end + i + self.hash_length + best_length})')
+            print(f'\t\tCandidates: {candidate_positions}')
 
             # 1. Need to validate if any of them are true matches (collisions)
             # - If so, update best length
@@ -131,8 +131,11 @@ class MorphingMatchChainBasedMatchFinder(HashBasedMatchFinder):
 
             # N+1 Chain
             # next_hash_data = bytearray(lookahead_buffer[i : i + len(hash_data) + 1])
+            next_hash_data = hash_data.copy()
+            print(f'Next hash?', i + len(hash_data), ' < ', len(lookahead_buffer))
             if i + len(hash_data) < len(lookahead_buffer):
-                next_hash_data = hash_data + bytearray([lookahead_buffer[i + len(hash_data)]])
+                next_hash_data.append(lookahead_buffer[i + len(hash_data)])
+            print(hash_data, next_hash_data)
             next_hash = self._hash(next_hash_data)
             next_candidates = self.get_positions_from_hash(
                 next_hash_data
@@ -145,24 +148,25 @@ class MorphingMatchChainBasedMatchFinder(HashBasedMatchFinder):
             for candidate in prev_candidates_copy:
                 offset = self.window.end + i - candidate
                 if offset > self.window.size:
-                    print('Larger than window, skipping candidate')
+                    # print('Larger than window, skipping candidate')
                     continue
 
                 # If we already lazily added it, return literal
-                # if self.window.end + i == candidate:
-                #     print('Already saw...', i)
-                #     return (1, 0, 0)
+                if self.window.end + i == candidate:
+                    # print('Already saw...', i)
+                    # return (1, 0, 0)
+                    continue
 
                 # Check if true candidate (to avoid hash collisions)
                 candidate_match = bytearray()
                 for x in range(len(hash_data)):
                     candidate_match.append(self.window.get_byte_window_plus_lookahead(candidate + x, lookahead_buffer))
                 if hash_data == candidate_match:
-                    # print('\t\tMatch!!!')
+                    print('\t\tMatch!!!')
                     best_match_pos = candidate
                     found_candidate = True
                 else:
-                    # print('\t\tNo match :(')
+                    print('\t\tNo match :(')
                     continue
 
                 if candidate + len(hash_data) - self.window.end >= len(lookahead_buffer):
@@ -172,24 +176,25 @@ class MorphingMatchChainBasedMatchFinder(HashBasedMatchFinder):
                 # print(next_hash_data, 'vs', candidate_nplus1)
                 candidate_hash = self._hash(candidate_nplus1)
 
-                # print(f'\t\tCandidate {candidate} - {repr(''.join([chr(x) for x in candidate_nplus1]))} - {candidate_hash} ?= {next_hash}')
+                print(f'\t\tCandidate {candidate} - {repr(''.join([chr(x) for x in candidate_nplus1]))} - {candidate_hash} ?= {next_hash}')
                 if candidate_hash == next_hash:
-                    # print(f'\t\tPromoting candidate at {candidate}')
+                    print(f'\t\tRemoving candidate at {candidate}')
                     prev_candidates.remove(candidate)
                     if candidate not in next_candidates:
+                        print(f'\t\tPromoting candidate at {candidate}')
                         self.add_to_hashtable_keep_next_position(candidate, next_hash_data)
 
             if found_candidate:
                 best_length = len(hash_data)
-                print('Adding to length, now', best_length)
+                print('\t\tAdding to length, now', best_length)
 
-            # print(f'\t\tUpdated N={len(hash_data)}) candidates: {self.get_positions_from_hash(hash_data)}')
-            # print(f'\t\tUpdated N+1={len(next_hash_data)}) candidates: {self.get_positions_from_hash(next_hash_data)}')
+            print(f'\t\tUpdated N={len(hash_data)}) candidates: {self.get_positions_from_hash(hash_data)}')
+            print(f'\t\tUpdated N+1={len(next_hash_data)}) candidates: {self.get_positions_from_hash(next_hash_data)}')
 
             # Add to current N chain
-            # print(f'\tAdded to N chain for {repr(''.join([chr(x) for x in hash_data]))} - [{self.window.end + i}, {self.window.end + i + len(hash_data)})')
+            print(f'\tAdded to N chain for {repr(''.join([chr(x) for x in hash_data]))} - [{self.window.end + i}, {self.window.end + i + len(hash_data)})')
             self.add_to_hashtable_keep_next_position(self.next_position_to_hash, hash_data)
-            # print(f'\t\tNew chain: {self.get_positions_from_hash(hash_data)}')
+            print(f'\t\tNew chain: {self.get_positions_from_hash(hash_data)}')
 
             if len(next_hash_data) == len(hash_data):
                 # print('Breaking...')
@@ -256,7 +261,7 @@ class MorphingMatchChainBasedMatchFinder(HashBasedMatchFinder):
                     # we now keep going forward until the match length keeps increasing
                     # or we reach the end of the lookahead buffer
                     for j in range(i + 1, min(i+4, num_positions_to_consider)):
-                        print(f'\tLazy at {j}')
+                        # print(f'\tLazy at {j}')
                         (
                             new_best_literals_count,
                             new_best_match_pos,
@@ -266,10 +271,10 @@ class MorphingMatchChainBasedMatchFinder(HashBasedMatchFinder):
                             best_literals_count = new_best_literals_count
                             best_match_pos = new_best_match_pos
                             best_length = new_best_length
-                            print(f'\t\t Lazy found best match with literal count {best_literals_count}, starting {best_match_pos} of length {best_length}')
+                            # print(f'\t\t Lazy found best match with literal count {best_literals_count}, starting {best_match_pos} of length {best_length}')
                         else:
                             break
-                    print(f'\t\tFinal at {best_match_pos} of length {best_length}, count {best_literals_count}')
+                    # print(f'\t\tFinal at {best_match_pos} of length {best_length}, count {best_literals_count}')
                     return (best_literals_count, best_match_pos, best_length)
 
         return (num_positions_to_consider, 0, 0)
@@ -286,6 +291,9 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-c", "--max_chain_length", help="set max chain length", type=int
+    )
+    parser.add_argument(
+        "-s", "--hash_table_size", help="set hash table size", type=int
     )
 
     # constants
@@ -306,5 +314,7 @@ if __name__ == "__main__":
         match_finder = MorphingMatchChainBasedMatchFinder()
         if args.max_chain_length:
             match_finder.max_chain_length = args.max_chain_length
+        if args.hash_table_size:
+            match_finder.hash_table_size = args.hash_table_size
         encoder = LZ77SlidingWindowEncoder(match_finder, initial_window=initial_window)
         encoder.encode_file(args.input, args.output, block_size=BLOCKSIZE)
